@@ -23,7 +23,12 @@
     "guzzlehttp/guzzle":"~5.3",
     "symfony/dom-crawler":"~2.8",
     "aszone/fakeheadres": "~0.1",
-    "aszone/proxyavenger": "~0.1"
+    "aszone/proxyavenger": "dev-master"
+  },
+  "autoload": {
+    "psr-4": {
+      "ASZone\\": "src/"
+    }
   },
   "minimum-stability": "dev"
 }
