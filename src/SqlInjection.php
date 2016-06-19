@@ -1,6 +1,6 @@
 <?php
 
-namespace Aszone\Vunerabilities;
+namespace Aszone\Vulnerabilities;
 
 use Respect\Validation\Validator as v;
 use Aszone\FakeHeaders;
