@@ -25,5 +25,5 @@
     "aszone/fakeheadres": "~0.1",
     "aszone/proxyavenger": "~0.1"
   },
-  "minimum-stability": "beta"
+  "minimum-stability": "dev"
 }
