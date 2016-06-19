@@ -1,0 +1,27 @@
+{
+  "name": "aszone/vulnerabilities",
+  "type": "library",
+  "description": "AsZone Component - Avenger Vulnerabilities",
+  "keywords": ["attack","hacking","vulnerabilities","sql injection","check","lfd", "sqli", "Local File Download", "Local File Disclousure"],
+  "homepage": "http://www.lenonleite.com.br",
+  "license": "MIT",
+  "version": "0.1",
+  "authors": [
+    {
+      "name": "Lenon Leite",
+      "email": "lenonleite@gmail.com.br",
+      "homepage": "http://www.lenonleite.com.br"
+    },
+    {
+      "name": "ASZone",
+      "homepage": "https://www.aszone.com.br"
+    }
+
+  ],
+  "require": {
+    "php": ">=5.3.9",
+    "guzzlehttp/guzzle":"~5.3",
+    "symfony/dom-crawler":"~2.8"
+  },
+  "minimum-stability": "beta"
+}
