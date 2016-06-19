@@ -1,9 +1,9 @@
 <?php
 
-namespace Aszone\Component\SearchHacking\Lib\Vunerabilities;
+namespace Aszone\Vunerabilities;
 
 use Respect\Validation\Validator as v;
-use Aszone\Component\SearchHacking\Lib\FakeHeaders\FakeHeaders;
+use Aszone\FakeHeaders;
 use GuzzleHttp\Client;
 
 class SqlInjection
