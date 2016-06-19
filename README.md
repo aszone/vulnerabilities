@@ -24,13 +24,13 @@ php composer.phar require aszone/vulnerabilities
 > Var $result is array of urls for test
 
 ```bash
-$sqli = new SqlInjection($commandData, $result);
-$resultSqli['sqli'] = $sqli->check();
+$sqli = new SqlInjection($commandData, $listOfUrls);
+$resultSqli = $sqli->check();
 ```
    
 ```bash
-$lfd = new LocalFileDownload($commandData, $result);
-$resultLFD['lfd'] = $lfd->check();
+$lfd = new LocalFileDownload($commandData, $listOfUrls);
+$resultLFD = $lfd->check();
 ```
 
 ## Commands
