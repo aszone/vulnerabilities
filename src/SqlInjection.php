@@ -153,11 +153,11 @@ class SqlInjection
 
     protected function getErrorsOfList()
     {
-        $errorsMysql = parse_ini_file(__DIR__.'/resource/Errors/mysql.ini');
-        $errorsMariaDb = parse_ini_file(__DIR__.'/resource/Errors/mariadb.ini');
-        $errorsOracle = parse_ini_file(__DIR__.'/resource/Errors/oracle.ini');
-        $errorssqlServer = parse_ini_file(__DIR__.'/resource/Errors/sqlserver.ini');
-        $errorsPostgreSql = parse_ini_file(__DIR__.'/resource/Errors/postgresql.ini');
+        $errorsMysql = parse_ini_file(__DIR__ . '/resource/Errors/mysql.ini');
+        $errorsMariaDb = parse_ini_file(__DIR__ . '/resource/Errors/mariadb.ini');
+        $errorsOracle = parse_ini_file(__DIR__ . '/resource/Errors/oracle.ini');
+        $errorssqlServer = parse_ini_file(__DIR__ . '/resource/Errors/sqlserver.ini');
+        $errorsPostgreSql = parse_ini_file(__DIR__ . '/resource/Errors/postgresql.ini');
 
         return array_merge($errorsMysql, $errorsMariaDb, $errorsOracle, $errorssqlServer, $errorsPostgreSql);
     }
