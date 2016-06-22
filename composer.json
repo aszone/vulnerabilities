@@ -5,7 +5,6 @@
   "keywords": ["attack","hacking","vulnerabilities","sql injection","check","lfd", "sqli", "Local File Download", "Local File Disclousure", "hacker"],
   "homepage": "http://www.lenonleite.com.br",
   "license": "MIT",
-  "version": "0.1",
   "authors": [
     {
       "name": "Lenon Leite",
