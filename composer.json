@@ -23,7 +23,7 @@
     "guzzlehttp/guzzle":"~5.3",
     "symfony/dom-crawler":"~2.8",
     "respect/validation":"~1.0",
-    "aszone/fakeheadres": "~0.1",
+    "aszone/fakeheaders": "dev-master",
     "aszone/proxyavenger": "dev-master"
   },
   "autoload": {
