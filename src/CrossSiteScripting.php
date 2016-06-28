@@ -57,7 +57,10 @@ class CrossSiteScripting
         foreach ($this->targets as $searchEngenier) {
             foreach ($searchEngenier as $keyTarget => $target) {
                 $this->target = urldecode(urldecode($target));
-                $result[] = $this->checkSuccess();
+                $resultCheck = $this->checkSuccess();
+                if($resultCheck){
+                    $result[]=$resultCheck;
+                }
             }
         }
 
@@ -166,11 +169,15 @@ class CrossSiteScripting
     {
         $explodeUrl = parse_url($this->target);
         $explodeQuery = explode('&', $explodeUrl['query']);
-
+        $wordsValue=array();
         //Identify and sets urls of values of Get
         foreach ($explodeQuery as $keyQuery => $query) {
             $explodeQueryEqual = explode('=', $query);
-            $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
+            $wordsValue[$explodeQueryEqual[0]]="";
+            if(isset($explodeQueryEqual[1])){
+                $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
+            }
+
         }
 
         foreach($wordsValue as $keyValue => $value){
