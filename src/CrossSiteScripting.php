@@ -169,6 +169,9 @@ class CrossSiteScripting
     {
         $explodeUrl = parse_url($this->target);
         $explodeQuery = explode('&', $explodeUrl['query']);
+        if(!isset($explodeUrl['query'])){
+            return array();
+        }
         $wordsValue=array();
         //Identify and sets urls of values of Get
         foreach ($explodeQuery as $keyQuery => $query) {
