@@ -3,7 +3,7 @@
 namespace Aszone\Vulnerabilities;
 
 use Respect\Validation\Validator as v;
-use Aszone\FakeHeaders;
+use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
 class SqlInjection

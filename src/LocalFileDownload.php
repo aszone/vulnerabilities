@@ -3,7 +3,7 @@
 namespace Aszone\Vulnerabilities;
 
 use Respect\Validation\Validator as v;
-use Aszone\FakeHeaders;
+use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
 class LocalFileDownload
@@ -139,12 +139,12 @@ class LocalFileDownload
         echo "\n".$this->target;
         $explodeUrl = parse_url($this->target);
         $ext = $this->getExtension();
-        $urlFinal = [];
+        $urlsFinal = [];
         $urlsIndex = $this->generateUrlsByExploit('index.'.$ext);
         $urlsPath = $this->generateUrlsByExploit($explodeUrl['path']);
         $urlsEtc = $this->generateUrlsByExploit('etc/passwd');
         $urlsFinal = array_merge($urlsPath, $urlsIndex, $urlsEtc);
-        return $urlFinal;
+        return $urlsFinal;
     }
 
     protected function generateUrlsByExploit($exploit)
