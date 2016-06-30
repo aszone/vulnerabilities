@@ -45,8 +45,9 @@ class SqlInjection
             foreach ($this->targets as $keySearchEngenier => $searchEngenier) {
                 foreach ($searchEngenier as $keyTarget => $target) {
                     $this->target = urldecode(urldecode($target));
-                    if ($this->checkSuccess()) {
-                        $result[] = $this->checkSuccess();
+                    $resultCheck = $this->checkSuccess();
+                    if($resultCheck){
+                        $result[]=$resultCheck;
                     }
                 }
             }

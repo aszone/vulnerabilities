@@ -46,7 +46,10 @@ class LocalFileDownload
         foreach ($this->targets as $searchEngenier) {
             foreach ($searchEngenier as $keyTarget => $target) {
                 $this->target = urldecode(urldecode($target));
-                $result[] = $this->checkSuccess();
+                $resultCheck = $this->checkSuccess();
+                if($resultCheck){
+                    $result[]=$resultCheck;
+                }
             }
         }
 
@@ -155,7 +158,11 @@ class LocalFileDownload
         //Identify and sets urls of values of Get
         foreach ($explodeQuery as $keyQuery => $query) {
             $explodeQueryEqual = explode('=', $query);
-            $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
+            $wordsValue[$explodeQueryEqual[0]]="";
+            if($explodeQueryEqual[1]){
+                $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
+            }
+
             //$wordsKey[$keyQuery]=$explodeQueryEqual[0];
         }
         foreach($wordsValue as $keyValue => $value){

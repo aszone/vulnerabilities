@@ -57,7 +57,10 @@ class LocalFileInclusion
         foreach ($this->targets as $searchEngenier) {
             foreach ($searchEngenier as $keyTarget => $target) {
                 $this->target = urldecode(urldecode($target));
-                $result[] = $this->checkSuccess();
+                $resultCheck = $this->checkSuccess();
+                if($resultCheck){
+                    $result[]=$resultCheck;
+                }
             }
         }
 
