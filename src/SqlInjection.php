@@ -102,11 +102,12 @@ class SqlInjection
         $queryFinal = '';
         //Identify and sets urls of values of Get
         foreach ($explodeQuery as $keyQuery => $query) {
-            $queryFinal .= $query."'";
+            $queryFinal .= $query."'&";
             //$explodeQueryEqual=explode("=",$query);
             //$wordsValue[$keyQuery]=$explodeQueryEqual[1];
             //$wordsKey[$keyQuery]=$explodeQueryEqual[0];
         }
+        $queryFinal = substr($queryFinal,0,-1);
 
         return $explodeUrl['scheme'].'://'.$explodeUrl['host'].$explodeUrl['path'].'?'.$queryFinal;
     }
