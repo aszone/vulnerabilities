@@ -145,8 +145,8 @@ class LocalFileDownload
         $urlsFinal = [];
         $urlsIndex = $this->generateUrlsByExploit('index.'.$ext);
         $urlsPath = $this->generateUrlsByExploit($explodeUrl['path']);
-        $urlsEtc = $this->generateUrlsByExploit('etc/passwd');
-        $urlsFinal = array_merge($urlsPath, $urlsIndex, $urlsEtc);
+        //$urlsEtc = $this->generateUrlsByExploit('etc/passwd');
+        $urlsFinal = array_merge($urlsPath, $urlsIndex);
         return $urlsFinal;
     }
 
