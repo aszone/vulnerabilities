@@ -125,7 +125,7 @@ class LocalFileDownload
             'headers' => ['User-Agent' => $header->getUserAgent()],
             'proxy' => $this->commandData['tor'],
             'timeout' => 30,
-            ],
+        ],
         ]);
         try {
             return $client->get($url)->getBody()->getContents();
