@@ -6,95 +6,35 @@ use Respect\Validation\Validator as v;
 use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
-class SqlInjection
+class SqlInjection extends CommandDataConfig implements VulnerabilityScanner
 {
-    public $targets;
-    public $target;
+    const EXPLOIT = "'";
 
-    public $tor;
+    private $errors = [];
 
-    public $commandData;
-
-    public function __construct($commandData, $targets)
+    public function isVulnerable($target)
     {
-        //Check command of entered.
-        $defaultEnterData = $this->defaultEnterData();
-        $this->commandData = array_merge($defaultEnterData, $commandData);
-        if ($this->commandData['torl']) {
-            $this->commandData['tor'] = $this->commandData['torl'];
-        }
-        $this->targets = $targets;
-    }
-
-    private function defaultEnterData()
-    {
-        $dataDefault['dork'] = false;
-        $dataDefault['pl'] = false;
-        $dataDefault['tor'] = false;
-        $dataDefault['torl'] = false;
-        $dataDefault['virginProxies'] = false;
-        $dataDefault['proxyOfSites'] = false;
-
-        return $dataDefault;
-    }
-
-    public function check()
-    {
-        $result = array();
-        if ($this->targets) {
-            foreach ($this->targets as $keySearchEngenier => $searchEngenier) {
-                foreach ($searchEngenier as $keyTarget => $target) {
-                    $this->target = urldecode(urldecode($target));
-                    $resultValid = $this->checkSuccess();
-                    if ($resultValid) {
-                        $result[]=$resultValid;
-                    }
-                }
-            }
-        }
-
-        return $result;
-    }
-    protected function checkSuccess()
-    {
-        $isValidSqli = $this->isSqlInjection();
-        if (!$isValidSqli) {
-            return false;
-        }
-
-        return $this->setVull();
-    }
-
-    protected function isSqlInjection()
-    {
-        $explodeUrl = parse_url($this->target);
-        if (isset($explodeUrl['query'])) {
-            return true;
+        if ($this->isSqlInjectionPossible($target)) {
+            return $this->verify($target);
         }
 
         return false;
     }
 
-    protected function getWordListInArray($wordlist)
+    protected function isSqlInjectionPossible($target)
     {
-        $checkFileWordList = v::file()->notEmpty()->validate($wordlist);
-        if ($checkFileWordList) {
-            $targetResult = file($wordlist, FILE_IGNORE_NEW_LINES);
-
-            return $targetResult;
-        }
-
-        return false;
+        return isset(parse_url($target)['query']);
     }
 
-    protected function setVull()
+    protected function verify($target)
     {
-        $urls = $this->generateUrlByExploit();
+        $urls = $this->generateUrlByExploit($target);
+
         foreach($urls as $url){
-            echo "\n url =>".$url."\n";
-            $resultcheckAttack = $this->setAttack($url);
-            if (!empty($resultcheckAttack)) {
-                echo 'Is Vull';
+            $this->output("\n url =>".$url."\n");
+
+            if ($this->attack($url)) {
+                $this->output('Is Vull');
 
                 return $url;
             }
@@ -103,36 +43,37 @@ class SqlInjection
         return false;
     }
 
-    protected function generateUrlByExploit()
+    public function generateUrlByExploit($target)
     {
-        $exploit="'";
-        $explodeUrl = parse_url($this->target);
+        $explodeUrl = parse_url($target);
         $explodeQuery = explode('&', $explodeUrl['query']);
-        //Identify and sets urls of values of Get
+        
         foreach ($explodeQuery as $keyQuery => $query) {
             $explodeQueryEqual = explode('=', $query);
             $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
         }
+
         foreach($wordsValue as $keyValue => $value){
-            $urls[]=str_replace($keyValue."=".$value,$keyValue."=".$value.$exploit,$this->target);
+            $urls[] = str_replace($keyValue . "=" . $value, $keyValue . "=" . $value . static::EXPLOIT, $target);
         }
 
         return $urls;
     }
 
-    protected function setAttack($url)
+    public function attack($url)
     {
         $header = new FakeHeaders();
         $client = new Client(['defaults' => [
             'headers' => ['User-Agent' => $header->getUserAgent()],
             'proxy' => $this->commandData['tor'],
-            'timeout' => 30,
-        ],
-        ]);
+            'timeout' => 30
+        ]]);
+
         try {
             $body = $client->get($url)->getBody()->getContents();
+            
             if ($body) {
-                if ($this->checkErrorSql($body)) {
+                if ($this->checkError($body)) {
                     return $url;
                 }
             }
@@ -141,18 +82,19 @@ class SqlInjection
                 return $url;
             }
 
-            echo 'Error code => '.$e->getCode()."\n";
+            $this->output('Error code => '.$e->getCode()."\n");
         }
 
         return false;
     }
 
-    protected function checkErrorSql($body)
+    public function checkError($body)
     {
-        //echo $body;
-        $errors = $this->getErrorsOfList();
+        $errors = $this->getErrors();
+
         foreach ($errors as $error) {
             $isValid = strpos($body, $error);
+            
             if ($isValid !== false) {
                 return true;
             }
@@ -161,14 +103,30 @@ class SqlInjection
         return false;
     }
 
-    protected function getErrorsOfList()
+    protected function getErrors()
     {
-        $errorsMysql = parse_ini_file(__DIR__ . '/resource/Errors/mysql.ini');
-        $errorsMariaDb = parse_ini_file(__DIR__ . '/resource/Errors/mariadb.ini');
-        $errorsOracle = parse_ini_file(__DIR__ . '/resource/Errors/oracle.ini');
-        $errorssqlServer = parse_ini_file(__DIR__ . '/resource/Errors/sqlserver.ini');
-        $errorsPostgreSql = parse_ini_file(__DIR__ . '/resource/Errors/postgresql.ini');
+        if (! $this->errors) {
+            $this->loadErrors();
+        }
 
-        return array_merge($errorsMysql, $errorsMariaDb, $errorsOracle, $errorssqlServer, $errorsPostgreSql);
+        return $this->errors;
+    }
+
+    protected function loadErrors()
+    {
+        $errorsMysql = parse_ini_file(__DIR__ . '/../resources/Errors/mysql.ini');
+        $errorsMariaDb = parse_ini_file(__DIR__ . '/../resources/Errors/mariadb.ini');
+        $errorsOracle = parse_ini_file(__DIR__ . '/../resources/Errors/oracle.ini');
+        $errorssqlServer = parse_ini_file(__DIR__ . '/../resources/Errors/sqlserver.ini');
+        $errorsPostgreSql = parse_ini_file(__DIR__ . '/../resources/Errors/postgresql.ini');
+
+        $this->errors = array_merge(
+            $errorsMysql, 
+            $errorsMariaDb, 
+            $errorsOracle, 
+            $errorssqlServer, 
+            $errorsPostgreSql
+        );
     }
 }
+

