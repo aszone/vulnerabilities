@@ -12,13 +12,13 @@ abstract class CommandDataConfig
         'tor' => false,
         'torl' => false,
         'virginProxies' => false,
-        'proxyOfSites' => false
+        'proxyOfSites' => false,
     ];
 
     public function __construct(array $commandData)
     {
         $this->commandData = array_merge($this->defaultCommandData, $commandData);
-        
+
         if ($this->commandData['torl']) {
             $this->commandData['tor'] = $this->commandData['torl'];
         }
@@ -29,4 +29,3 @@ abstract class CommandDataConfig
         echo $value;
     }
 }
-
