@@ -15,15 +15,15 @@ class LocalFileDownloadTest extends \PHPUnit_Framework_TestCase
 
     public function testIsNotVulnerable()
     {
-        $target = "http://example.com/index.html?a=1";
+        $target = 'http://example.com/index.html?a=1';
 
         $this->assertFalse($this->instance->isVulnerable($target));
     }
 
     public function testGenerateUrls()
     {
-        $target = "http://example.com/index.html?param=1&query=a";
-        $url0 = sprintf("http://example.com/index.html?param=%s&query=a", "/index.html");
+        $target = 'http://example.com/index.html?param=1&query=a';
+        $url0 = sprintf('http://example.com/index.html?param=%s&query=a', '/index.html');
 
         $urls = $this->instance->generateUrls($target);
 
@@ -34,8 +34,8 @@ class LocalFileDownloadTest extends \PHPUnit_Framework_TestCase
 
     public function testIsLfdPossible()
     {
-        $target = "http://example.com/index.html?param=1&query=a";
-        
+        $target = 'http://example.com/index.html?param=1&query=a';
+
         $isValid = $this->instance->isLfdPossible($target);
 
         $this->assertTrue($isValid);
@@ -43,11 +43,10 @@ class LocalFileDownloadTest extends \PHPUnit_Framework_TestCase
 
     public function testIsLfdNotPossible()
     {
-        $target = "http://example.com/index.html";
-        
+        $target = 'http://example.com/index.html';
+
         $isValid = $this->instance->isLfdPossible($target);
 
         $this->assertFalse($isValid);
     }
 }
-

@@ -2,14 +2,13 @@
 
 namespace Aszone\Vulnerabilities;
 
-use Respect\Validation\Validator as v;
 use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
 class CrossSiteScripting extends CommandDataConfig implements VulnerabilityScanner
 {
-    const EXPLOIT1 = "<script>alert(aaabbbccc);</script>";
-    const EXPLOIT2 = "<h1>aaabbbccc</h1>";
+    const EXPLOIT1 = '<script>alert(aaabbbccc);</script>';
+    const EXPLOIT2 = '<h1>aaabbbccc</h1>';
     const EXPLOIT1REGEX = "<script>alert\(aaabbbccc\);<\/script>";
     const EXPLOIT2REGEX = "<h1>aaabbbccc<\/h1>";
 
@@ -32,9 +31,9 @@ class CrossSiteScripting extends CommandDataConfig implements VulnerabilityScann
     public function verify($target)
     {
         $urls = $this->generateUrls($target);
-        
+
         $this->output("\n");
-        
+
         foreach ($urls as $url) {
             if ($this->attack($url)) {
                 $this->output('Is Vull');
@@ -54,13 +53,13 @@ class CrossSiteScripting extends CommandDataConfig implements VulnerabilityScann
         $client = new Client(['defaults' => [
             'headers' => ['User-Agent' => $header->getUserAgent()],
             'proxy' => $this->commandData['tor'],
-            'timeout' => 30
+            'timeout' => 30,
         ]]);
 
         try {
             $body = $client->get($url)->getBody()->getContents();
 
-            if ($body && $this->checkSuccess($body) && ! $this->checkError($body)) {
+            if ($body && $this->checkSuccess($body) && !$this->checkError($body)) {
                 return true;
             }
         } catch (\Exception $e) {
@@ -70,43 +69,43 @@ class CrossSiteScripting extends CommandDataConfig implements VulnerabilityScann
         return false;
     }
 
-    public function checkSuccess($body) 
+    public function checkSuccess($body)
     {
-        return (bool) preg_match("/" . static::EXPLOIT1REGEX . "|" . static::EXPLOIT2REGEX . "/", $body);
+        return (bool) preg_match('/'.static::EXPLOIT1REGEX.'|'.static::EXPLOIT2REGEX.'/', $body);
     }
 
     public function generateUrls($target)
     {
-        $this->output("\n" . $target);
+        $this->output("\n".$target);
 
         $urls1 = $this->generateUrlsByExploit($target, static::EXPLOIT1);
         $urls2 = $this->generateUrlsByExploit($target, static::EXPLOIT2);
-        
+
         return array_merge($urls1, $urls2);
     }
 
     public function generateUrlsByExploit($target, $exploit)
     {
-        $explodeUrl   = parse_url($target);
+        $explodeUrl = parse_url($target);
         $explodeQuery = explode('&', $explodeUrl['query']);
 
-        if (! isset($explodeUrl['query'])) {
+        if (!isset($explodeUrl['query'])) {
             return [];
         }
 
         $wordsValue = [];
-        
+
         foreach ($explodeQuery as $query) {
             $explodeQueryEqual = explode('=', $query);
-            $wordsValue[$explodeQueryEqual[0]] = "";
-            
+            $wordsValue[$explodeQueryEqual[0]] = '';
+
             if (isset($explodeQueryEqual[1])) {
                 $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
             }
         }
 
         foreach ($wordsValue as $keyValue => $value) {
-            $urls[] = str_replace($keyValue . "=" . $value, $keyValue . "=" . $exploit, $target);
+            $urls[] = str_replace($keyValue.'='.$value, $keyValue.'='.$exploit, $target);
         }
 
         return $urls;
@@ -115,7 +114,7 @@ class CrossSiteScripting extends CommandDataConfig implements VulnerabilityScann
     public function checkError($body)
     {
         $errors = $this->getErrors();
-        
+
         foreach ($errors as $error) {
             $isValid = strpos($body, $error);
 
@@ -129,7 +128,7 @@ class CrossSiteScripting extends CommandDataConfig implements VulnerabilityScann
 
     protected function getErrors()
     {
-        if (! $this->errors) {
+        if (!$this->errors) {
             $this->loadErrors();
         }
 
@@ -138,23 +137,22 @@ class CrossSiteScripting extends CommandDataConfig implements VulnerabilityScann
 
     protected function loadErrors()
     {
-        $errorsMysql = parse_ini_file(__DIR__ . '/../resources/Errors/mysql.ini');
-        $errorsMariaDb = parse_ini_file(__DIR__ . '/../resources/Errors/mariadb.ini');
-        $errorsOracle = parse_ini_file(__DIR__ . '/../resources/Errors/oracle.ini');
-        $errorssqlServer = parse_ini_file(__DIR__ . '/../resources/Errors/sqlserver.ini');
-        $errorsPostgreSql = parse_ini_file(__DIR__ . '/../resources/Errors/postgresql.ini');
-        $errorsAsp = parse_ini_file(__DIR__ . '/../resources/Errors/asp.ini');
-        $errorsPhp = parse_ini_file(__DIR__ . '/../resources/Errors/php.ini');
+        $errorsMysql = parse_ini_file(__DIR__.'/../resources/Errors/mysql.ini');
+        $errorsMariaDb = parse_ini_file(__DIR__.'/../resources/Errors/mariadb.ini');
+        $errorsOracle = parse_ini_file(__DIR__.'/../resources/Errors/oracle.ini');
+        $errorssqlServer = parse_ini_file(__DIR__.'/../resources/Errors/sqlserver.ini');
+        $errorsPostgreSql = parse_ini_file(__DIR__.'/../resources/Errors/postgresql.ini');
+        $errorsAsp = parse_ini_file(__DIR__.'/../resources/Errors/asp.ini');
+        $errorsPhp = parse_ini_file(__DIR__.'/../resources/Errors/php.ini');
 
         $this->errors = array_merge(
-            $errorsMysql, 
-            $errorsMariaDb, 
-            $errorsOracle, 
-            $errorssqlServer, 
+            $errorsMysql,
+            $errorsMariaDb,
+            $errorsOracle,
+            $errorssqlServer,
             $errorsPostgreSql,
             $errorsAsp,
-            $errorsPhp 
+            $errorsPhp
         );
     }
 }
-

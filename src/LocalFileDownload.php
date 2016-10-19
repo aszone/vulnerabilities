@@ -2,7 +2,6 @@
 
 namespace Aszone\Vulnerabilities;
 
-use Respect\Validation\Validator as v;
 use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
@@ -56,7 +55,7 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
         $client = new Client(['defaults' => [
            'headers' => ['User-Agent' => $header->getUserAgent()],
             'proxy' => $this->commandData['tor'],
-            'timeout' => 30
+            'timeout' => 30,
         ]]);
 
         try {
@@ -73,16 +72,16 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
         $this->output("\n".$target);
 
         $parts = parse_url($target);
-        
-        if (! isset($parts['path'])) {
+
+        if (!isset($parts['path'])) {
             return [];
         }
-        
+
         $ext = $this->getExtension($parts['path']);
 
-        $urlsIndex = $this->generateUrlsByExploit($target, 'index.' . $ext);
-        $urlsPath  = $this->generateUrlsByExploit($target, $parts['path']);
-        
+        $urlsIndex = $this->generateUrlsByExploit($target, 'index.'.$ext);
+        $urlsPath = $this->generateUrlsByExploit($target, $parts['path']);
+
         return array_merge($urlsPath, $urlsIndex);
     }
 
@@ -93,15 +92,15 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
 
         foreach ($explodeQuery as $keyQuery => $query) {
             $explodeQueryEqual = explode('=', $query);
-            $wordsValue[$explodeQueryEqual[0]] = "";
-            
+            $wordsValue[$explodeQueryEqual[0]] = '';
+
             if ($explodeQueryEqual[1]) {
                 $wordsValue[$explodeQueryEqual[0]] = $explodeQueryEqual[1];
             }
         }
-        
+
         foreach ($wordsValue as $keyValue => $value) {
-            $urls[] = str_replace($keyValue . "=" . $value, $keyValue . "=??????????", $target);
+            $urls[] = str_replace($keyValue.'='.$value, $keyValue.'=??????????', $target);
         }
 
         $urlFinal = [];
@@ -111,8 +110,8 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
 
             $breakFolder = '../';
 
-            for ($i = 1;$i <= 10;++$i) {
-                $urlFinal[] = str_replace('??????????', $breakFolder . $exploit, $url);
+            for ($i = 1; $i <= 10; ++$i) {
+                $urlFinal[] = str_replace('??????????', $breakFolder.$exploit, $url);
                 $breakFolder .= '../';
             }
         }
@@ -123,7 +122,7 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
     protected function getExtension($path)
     {
         $isValidExt = preg_match("/\.(.*)/", $path, $matches);
-        
+
         if ($isValidExt) {
             return $matches[1];
         }
@@ -131,4 +130,3 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
         return false;
     }
 }
-
