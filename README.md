@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/aszone/vulnerabilities.svg?branch=master)](https://travis-ci.org/aszone/vulnerabilities)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/aszone/vulnerabilities/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/aszone/vulnerabilities/?branch=master)
+
 # Avenger Vulnerabilities
 
 > Avenger Vulnerabilities are methods and function for check possibles vulnerabilities
