@@ -5,7 +5,7 @@ namespace Aszone\Vulnerabilities;
 use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
-class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanner
+class LocalFileDownload implements VulnerabilityScanner
 {
     private $errors = [];
 

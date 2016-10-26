@@ -2,14 +2,31 @@
 
 namespace Aszone\Vulnerabilities;
 
-use Aszone\FakeHeaders\FakeHeaders;
-use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+use Psr\Log\LoggerInterface;
+use Aszone\Vulnerabilities\Log\Logger;
 
-class SqlInjection extends CommandDataConfig implements VulnerabilityScanner
+class SqlInjection implements VulnerabilityScanner
 {
     const EXPLOIT = "'";
 
-    private $errors = [];
+    private $errors;
+
+    private $client;
+
+    private $logger;
+
+    public function __construct(ClientInterface $client, array $errors, LoggerInterface $logger = null)
+    {
+        $this->client = $client;
+        $this->errors = $errors;
+
+        if (empty($logger)) {
+            $logger = new Logger;
+        }
+
+        $this->logger = $logger;
+    }
 
     public function isVulnerable($target)
     {
@@ -30,12 +47,12 @@ class SqlInjection extends CommandDataConfig implements VulnerabilityScanner
         $urls = $this->generateUrlByExploit($target);
 
         foreach ($urls as $url) {
-            $this->output("\n url =>".$url."\n");
+            $this->logger->info("\n url =>".$url."\n");
 
             if ($this->attack($url)) {
-                $this->output('Is Vull');
+                $this->logger->info('Is Vull');
 
-                return $url;
+                return true;
             }
         }
 
@@ -61,15 +78,8 @@ class SqlInjection extends CommandDataConfig implements VulnerabilityScanner
 
     public function attack($url)
     {
-        $header = new FakeHeaders();
-        $client = new Client(['defaults' => [
-            'headers' => ['User-Agent' => $header->getUserAgent()],
-            'proxy' => $this->commandData['tor'],
-            'timeout' => 30,
-        ]]);
-
         try {
-            $body = $client->get($url)->getBody()->getContents();
+            $body = $this->client->get($url)->getBody()->getContents();
 
             if ($body) {
                 if ($this->checkError($body)) {
@@ -81,7 +91,7 @@ class SqlInjection extends CommandDataConfig implements VulnerabilityScanner
                 return $url;
             }
 
-            $this->output('Error code => '.$e->getCode()."\n");
+            $this->logger->error('Error code => '.$e->getCode()."\n");
         }
 
         return false;
@@ -89,9 +99,7 @@ class SqlInjection extends CommandDataConfig implements VulnerabilityScanner
 
     public function checkError($body)
     {
-        $errors = $this->getErrors();
-
-        foreach ($errors as $error) {
+        foreach ($this->errors as $error) {
             $isValid = strpos($body, $error);
 
             if ($isValid !== false) {
@@ -100,31 +108,5 @@ class SqlInjection extends CommandDataConfig implements VulnerabilityScanner
         }
 
         return false;
-    }
-
-    protected function getErrors()
-    {
-        if (!$this->errors) {
-            $this->loadErrors();
-        }
-
-        return $this->errors;
-    }
-
-    protected function loadErrors()
-    {
-        $errorsMysql = parse_ini_file(__DIR__.'/../resources/Errors/mysql.ini');
-        $errorsMariaDb = parse_ini_file(__DIR__.'/../resources/Errors/mariadb.ini');
-        $errorsOracle = parse_ini_file(__DIR__.'/../resources/Errors/oracle.ini');
-        $errorssqlServer = parse_ini_file(__DIR__.'/../resources/Errors/sqlserver.ini');
-        $errorsPostgreSql = parse_ini_file(__DIR__.'/../resources/Errors/postgresql.ini');
-
-        $this->errors = array_merge(
-            $errorsMysql,
-            $errorsMariaDb,
-            $errorsOracle,
-            $errorssqlServer,
-            $errorsPostgreSql
-        );
     }
 }

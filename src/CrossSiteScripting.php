@@ -5,7 +5,7 @@ namespace Aszone\Vulnerabilities;
 use Aszone\FakeHeaders\FakeHeaders;
 use GuzzleHttp\Client;
 
-class CrossSiteScripting extends CommandDataConfig implements VulnerabilityScanner
+class CrossSiteScripting implements VulnerabilityScanner
 {
     const EXPLOIT1 = '<script>alert(aaabbbccc);</script>';
     const EXPLOIT2 = '<h1>aaabbbccc</h1>';
