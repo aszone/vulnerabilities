@@ -3,19 +3,43 @@
 namespace Aszone\Vulnerabilities\Test;
 
 use Aszone\Vulnerabilities\LocalFileDownload;
+use GuzzleHttp\ClientInterface;
+use Psr\Log\LoggerInterface;
+use GuzzleHttp\Message\ResponseInterface;
+use GuzzleHttp\Stream\StreamInterface;
 
 class LocalFileDownloadTest extends \PHPUnit_Framework_TestCase
 {
     private $instance;
 
+    private $stream;
+
     public function setUp()
     {
-        $this->instance = new LocalFileDownload([]);
+        $client = $this->createMock(ClientInterface::class);
+        $logger = $this->createMock(LoggerInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
+        $this->stream = $this->createMock(StreamInterface::class);
+
+        $client->method('get')
+            ->willReturn($response);
+
+        $response->method('getBody')
+            ->willReturn($this->stream);
+
+        $this->instance = new LocalFileDownload($client, $logger);
     }
 
     public function testIsNotVulnerable()
     {
-        $target = 'http://example.com/index.html?a=1';
+        $target = 'http://example.com/index.html';
+
+        $this->assertFalse($this->instance->isVulnerable($target));
+
+        $target = 'http://example.com/index.html?param=a';
+
+        $this->stream->method('getContents')
+            ->willReturn('lorem ipsum');
 
         $this->assertFalse($this->instance->isVulnerable($target));
     }

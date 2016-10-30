@@ -2,8 +2,9 @@
 
 namespace Aszone\Vulnerabilities;
 
-use Aszone\FakeHeaders\FakeHeaders;
-use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+use Psr\Log\LoggerInterface;
+use Aszone\Vulnerabilities\Log\Logger;
 
 class CrossSiteScripting implements VulnerabilityScanner
 {
@@ -12,7 +13,25 @@ class CrossSiteScripting implements VulnerabilityScanner
     const EXPLOIT1REGEX = "<script>alert\(aaabbbccc\);<\/script>";
     const EXPLOIT2REGEX = "<h1>aaabbbccc<\/h1>";
 
-    private $errors = [];
+    private $compare;
+
+    private $client;
+
+    private $logger;
+
+    public function __construct(ClientInterface $client, array $compare, LoggerInterface $logger = null)
+    {
+        $this->client = $client;
+        $this->compare = $compare;
+
+        if (empty($logger)) {
+            $logger = new Logger;
+        }
+
+        $this->logger = $logger;
+
+
+    }
 
     public function isVulnerable($target)
     {
@@ -30,15 +49,16 @@ class CrossSiteScripting implements VulnerabilityScanner
 
     public function verify($target)
     {
+
         $urls = $this->generateUrls($target);
 
-        $this->output("\n");
+        $this->logger->info("\n");
 
         foreach ($urls as $url) {
             if ($this->attack($url)) {
-                $this->output('Is Vull');
+                $this->logger->info('Is Vull');
 
-                return $url;
+                return true;
             }
         }
 
@@ -47,23 +67,15 @@ class CrossSiteScripting implements VulnerabilityScanner
 
     public function attack($url)
     {
-        $this->output('.');
-
-        $header = new FakeHeaders();
-        $client = new Client(['defaults' => [
-            'headers' => ['User-Agent' => $header->getUserAgent()],
-            'proxy' => $this->commandData['tor'],
-            'timeout' => 30,
-        ]]);
+        $this->logger->info('.');
 
         try {
-            $body = $client->get($url)->getBody()->getContents();
-
-            if ($body && $this->checkSuccess($body) && !$this->checkError($body)) {
+            $body = $this->client->get($url)->getBody()->getContents();
+            if ($body && $this->checkSuccess($body) && $this->checkCompare($body)) {
                 return true;
             }
         } catch (\Exception $e) {
-            $this->output('#');
+            $this->logger->error('#');
         }
 
         return false;
@@ -76,11 +88,9 @@ class CrossSiteScripting implements VulnerabilityScanner
 
     public function generateUrls($target)
     {
-        $this->output("\n".$target);
-
+        $this->logger->info("\n".$target);
         $urls1 = $this->generateUrlsByExploit($target, static::EXPLOIT1);
         $urls2 = $this->generateUrlsByExploit($target, static::EXPLOIT2);
-
         return array_merge($urls1, $urls2);
     }
 
@@ -111,13 +121,11 @@ class CrossSiteScripting implements VulnerabilityScanner
         return $urls;
     }
 
-    public function checkError($body)
+    public function checkCompare($body)
     {
-        $errors = $this->getErrors();
+        foreach ($this->compare as $compare) {
 
-        foreach ($errors as $error) {
-            $isValid = strpos($body, $error);
-
+            $isValid = strpos($body, $compare);
             if ($isValid !== false) {
                 return true;
             }
@@ -126,33 +134,4 @@ class CrossSiteScripting implements VulnerabilityScanner
         return false;
     }
 
-    protected function getErrors()
-    {
-        if (!$this->errors) {
-            $this->loadErrors();
-        }
-
-        return $this->errors;
-    }
-
-    protected function loadErrors()
-    {
-        $errorsMysql = parse_ini_file(__DIR__.'/../resources/Errors/mysql.ini');
-        $errorsMariaDb = parse_ini_file(__DIR__.'/../resources/Errors/mariadb.ini');
-        $errorsOracle = parse_ini_file(__DIR__.'/../resources/Errors/oracle.ini');
-        $errorssqlServer = parse_ini_file(__DIR__.'/../resources/Errors/sqlserver.ini');
-        $errorsPostgreSql = parse_ini_file(__DIR__.'/../resources/Errors/postgresql.ini');
-        $errorsAsp = parse_ini_file(__DIR__.'/../resources/Errors/asp.ini');
-        $errorsPhp = parse_ini_file(__DIR__.'/../resources/Errors/php.ini');
-
-        $this->errors = array_merge(
-            $errorsMysql,
-            $errorsMariaDb,
-            $errorsOracle,
-            $errorssqlServer,
-            $errorsPostgreSql,
-            $errorsAsp,
-            $errorsPhp
-        );
-    }
 }
