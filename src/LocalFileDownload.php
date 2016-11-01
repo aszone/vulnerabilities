@@ -2,12 +2,27 @@
 
 namespace Aszone\Vulnerabilities;
 
-use Aszone\FakeHeaders\FakeHeaders;
-use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+use Psr\Log\LoggerInterface;
+use Aszone\Vulnerabilities\Log\Logger;
 
-class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanner
+class LocalFileDownload implements VulnerabilityScanner
 {
-    private $errors = [];
+    private $client;
+
+    private $logger;
+
+    public function __construct(ClientInterface $client, LoggerInterface $logger = null)
+    {
+        $this->client = $client;
+
+        if (empty($logger)) {
+            $logger = new Logger;
+        }
+        $this->logger = $logger;
+
+
+    }
 
     public function isVulnerable($target)
     {
@@ -27,13 +42,13 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
     {
         $urls = $this->generateUrls($target);
 
-        $this->output("\n");
+        $this->logger->info("\n");
 
         foreach ($urls as $url) {
             $result = $this->attack($url);
 
             if ($result && $this->isApplicationFile($result)) {
-                $this->output('Is Vull');
+                $this->logger->info('Is Vull');
 
                 return $url;
             }
@@ -49,19 +64,12 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
 
     protected function attack($url)
     {
-        $this->output('.');
-
-        $header = new FakeHeaders();
-        $client = new Client(['defaults' => [
-           'headers' => ['User-Agent' => $header->getUserAgent()],
-            'proxy' => $this->commandData['tor'],
-            'timeout' => 30,
-        ]]);
+        $this->logger->info('.');
 
         try {
-            return $client->get($url)->getBody()->getContents();
+            return $this->client->get($url)->getBody()->getContents();
         } catch (\Exception $e) {
-            $this->output('#');
+            $this->logger->error('#');
         }
 
         return false;
@@ -69,7 +77,7 @@ class LocalFileDownload extends CommandDataConfig implements VulnerabilityScanne
 
     public function generateUrls($target)
     {
-        $this->output("\n".$target);
+        $this->logger->info($target);
 
         $parts = parse_url($target);
 

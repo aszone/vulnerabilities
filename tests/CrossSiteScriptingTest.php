@@ -3,29 +3,57 @@
 namespace Aszone\Vulnerabilities\Test;
 
 use Aszone\Vulnerabilities\CrossSiteScripting;
+use GuzzleHttp\ClientInterface;
+use Psr\Log\LoggerInterface;
+use GuzzleHttp\Message\ResponseInterface;
+use GuzzleHttp\Stream\StreamInterface;
+
 
 class CrossSiteScriptingTest extends \PHPUnit_Framework_TestCase
 {
     private $instance;
 
+    private $stream;
+
     public function setUp()
     {
-        $this->instance = new CrossSiteScripting([]);
+        $client = $this->createMock(ClientInterface::class);
+        $logger = $this->createMock(LoggerInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
+        $this->stream = $this->createMock(StreamInterface::class);
+        $compare = [CrossSiteScripting::EXPLOIT2];
+
+        $client->method('get')
+            ->willReturn($response);
+
+        $response->method('getBody')
+            ->willReturn($this->stream);
+
+        $this->instance = new CrossSiteScripting($client, $compare, $logger);
     }
 
     public function testIsVulnerable()
     {
-        $target = 'http://www.insecurelabs.org/task/Rule1?query=a';
+        $target = 'http://www.example.com/index.html?query=a';
 
-        $this->assertEquals(
-            substr($target, 0, -1).CrossSiteScripting::EXPLOIT2,
+        $this->stream->method('getContents')
+            ->willReturn('lorem '.CrossSiteScripting::EXPLOIT2.' ipsum');
+
+        $this->assertTrue(
             $this->instance->isVulnerable($target)
         );
     }
 
     public function testIsNotVulnerable()
     {
-        $target = 'http://www.insecurelabs.org';
+        $target = 'http://www.example.com/';
+
+        $this->assertFalse($this->instance->isVulnerable($target));
+
+        $target = 'http://example.com/index.html?param=a';
+
+        $this->stream->method('getContents')
+            ->willReturn('lorem ipsum');
 
         $this->assertFalse($this->instance->isVulnerable($target));
     }
@@ -80,17 +108,17 @@ class CrossSiteScriptingTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($this->instance->checkSuccess($body));
     }
 
-    public function testCheckError()
+    public function testCheckCompare()
     {
-        $body = 'lorem mysql_ ipsum';
+        $body = 'lorem '.CrossSiteScripting::EXPLOIT2.' ipsum';
 
-        $this->assertTrue($this->instance->checkError($body));
+        $this->assertTrue($this->instance->checkCompare($body));
     }
 
-    public function testCheckNotError()
+    public function testCheckNotCompare()
     {
         $body = 'lorem ipsum';
 
-        $this->assertFalse($this->instance->checkError($body));
+        $this->assertFalse($this->instance->checkCompare($body));
     }
 }
